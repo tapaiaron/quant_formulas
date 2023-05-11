@@ -11,13 +11,13 @@ from dateutil.relativedelta import relativedelta
 def calendar_spread_dollar_volatility(symbol1, symbol2, T1, T2):
     data1 = yf.download(symbol1, period='1d', start=(datetime.date.today()-relativedelta(years=20)).strftime('%Y-%m-%d'), end=(datetime.date.today()-datetime.timedelta(days=1)).strftime('%Y-%m-%d'))
     data2 = yf.download(symbol2, period='1d', start=(datetime.date.today()-relativedelta(years=20)).strftime('%Y-%m-%d'), end=(datetime.date.today()-datetime.timedelta(days=1)).strftime('%Y-%m-%d'))
-    prices1 = data1['Close'].values
-    prices2 = data2['Close'].values
+    prices1 = data1['Close']
+    prices2 = data2['Close']
+
     # Last Available price
-    F1 = prices1[-1]
-    F2 = prices2[-1]
+    F1 = prices1.iloc[-1]
+    F2 = prices2.iloc[-1]
     sigma1=np.log(prices1/prices1.shift(1)).std()*np.sqrt(252)
-    print(sigma1)
     # Calculate the time ratio, which is the ratio of T2 to T1 raised to the power of 0.5
     time_ratio = np.sqrt(T2 / T1)
     # Calculate the volatility of the back-month contract by scaling sigma1 by the time ratio
@@ -36,7 +36,8 @@ def calendar_spread_dollar_volatility(symbol1, symbol2, T1, T2):
     partial_deriv_F2 = N_d
     dollar_vol_F1 = partial_deriv_F1 * sigma * F1
     dollar_vol_F2 = partial_deriv_F2 * sigma * F2
-    return dollar_vol_F1, dollar_vol_F2, C, sigma
+    overall_dollar_volatility = np.sqrt(dollar_vol_F1 ** 2 + dollar_vol_F2 ** 2)
+    return dollar_vol_F1, dollar_vol_F2, C, sigma, overall_dollar_volatility
 
 
 def extract_month_year(symbol):
@@ -63,7 +64,8 @@ T1 = (datetime.datetime.combine(extract_month_year(symbol1), datetime.time()) - 
 T2 = (datetime.datetime.combine(extract_month_year(symbol2), datetime.time()) - datetime.datetime.combine((today - datetime.timedelta(days=1)), datetime.time())).days / 365
 
 
-dollar_vol_F1, dollar_vol_F2, option_price, sigma = calendar_spread_dollar_volatility(symbol1, symbol2, T1, T2)
+dollar_vol_F1, dollar_vol_F2, option_price, sigma, overall_dollar_volatility = calendar_spread_dollar_volatility(symbol1, symbol2, T1, T2)
 print('Dollar volatility of', symbol1, ':', dollar_vol_F1)
 print('Dollar volatility of', symbol2, ':', dollar_vol_F2)
-print('Option price:', option)
+print('Overall volatility of the spread', sigma)
+print('Option price:', option_price )
